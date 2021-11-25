@@ -1,13 +1,13 @@
 [app]
 
 # (str) Title of your application
-title = Dummy OpenCV App
+title = Kivy OpenCV Demo
 
 # (str) Package name
-package.name = dummyopencv
+package.name = kivyopencvdemo
 
 # (str) Package domain (needed for android/ios packaging)
-package.domain = org.test
+package.domain = it.cnr.imati.ge
 
 # (str) Source code where the main.py live
 source.dir = .

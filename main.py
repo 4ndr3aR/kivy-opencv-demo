@@ -14,13 +14,10 @@ from kivy.properties import ObjectProperty, NumericProperty
 import numpy as np
 import cv2
 
-#Builder.load_file("myapplayout.kv")
-
-
-
+media_source = 'video'
+#media_source = 'camera'			# remember to manually grant permissions for this!
 
 class KivyCamera(Image):
-	screen_resolution = (640, 480)
 	screen_resolution = (544, 544)
 	if kivy.platform == 'android':
 		image_resolution = (544, 544)
@@ -31,8 +28,6 @@ class KivyCamera(Image):
 	fps = NumericProperty(60)
 	counter = 0
 	debug = 0
-	#texture = ObjectProperty()
-	#.texture_size = ObjectProperty()
 
 	def __init__(self, **kwargs):
 		super(KivyCamera, self).__init__(**kwargs)
@@ -46,7 +41,6 @@ class KivyCamera(Image):
 		Clock.schedule_interval(self.update, 1.0 / self.fps)
 
 	def create_texture(self):
-		#self.texture = Texture.create(size=np.flip(self.camera_resolution), colorfmt='rgb')
 		self.texture = Texture.create(size=self.screen_resolution, colorfmt='rgb')
 		self.texture_size = list(self.texture.size)
 		if self.debug:
@@ -67,34 +61,11 @@ class KivyCamera(Image):
 			print(f'GL texture is {self.texture} - size: {self.texture_size}')
 		if ret:
 			self.create_texture()
-			#frame = self.frame_from_buf()
-			print(f'Showing frame: {frame.shape}')
+			if self.counter < 5:
+				print(f'Showing frame: {frame.shape}')
 			self.frame_to_screen(frame)
-			'''
-			buf1 = cv2.flip(frame, 0)
-			print(f'Showing frame: {frame.shape}')
-			buf = buf1.tostring()
-			offset = 0
-			if kivy.platform == 'android':
-				offset = 4
-			image_texture = Texture.create(
-				size=(frame.shape[1]+offset, frame.shape[0]+offset), colorfmt="bgr"
-			)
-			image_texture.blit_buffer(buf, colorfmt="bgr", bufferfmt="ubyte")
-			self.texture = image_texture
-			'''
 		else:
 			print(f'OpenCV failed to get frame: {int(ret)}')
-
-	def frame_from_buf(self):
-		w, h = self.resolution
-		frame = np.frombuffer(self._camera._buffer.tostring(), 'uint8').reshape((h + h // 2, w))	# original one
-		#frame = np.frombuffer(self._camera._buffer.tostring(), 'uint8').reshape((w, h + h // 2))
-		print(f'{frame.shape = }')
-		#frame_bgr = cv2.cvtColor(frame, 93)
-		frame_bgr = cv2.cvtColor(frame, cv2.COLOR_YUV2BGR_NV21)
-		#return np.rot90(frame_bgr, 3)
-		return frame_bgr
 
 	def frame_to_screen(self, frame):
 		if kivy.platform == 'android':
@@ -105,20 +76,15 @@ class KivyCamera(Image):
 		if self.counter == 0:
 			print(f'frame_rgb: {frame_rgb[:3]}')
 		self.counter += 1
-		'''
-		if kivy.platform == 'android':
-			buf = frame_rgb.tostring()
-		else:
-			flipped = np.flip(frame_rgb, 0)
-			buf = flipped.tostring()
-		'''
 		flipped = np.flip(frame_rgb, 0)
 		if self.screen_resolution != self.image_resolution:
 			aspect_ratio = self.image_resolution[0] / self.image_resolution[1]
-			print(f'{aspect_ratio = }')
+			if self.counter < 5:
+				print(f'{aspect_ratio = }')
 			flipped = cv2.resize(flipped, (int(self.screen_resolution[1]*aspect_ratio), self.screen_resolution[1]))	# I know, this one takes into account one case out of four or more (TODO)
 			self.screen_resolution = (int(self.screen_resolution[1]*aspect_ratio), self.screen_resolution[1])
-			print(f'Screen resolution != image resolution with aspect ratio: {aspect_ratio}, setting new screen resolution to: {self.screen_resolution}')
+			if self.counter < 5:
+				print(f'Screen resolution != image resolution with aspect ratio: {aspect_ratio}, setting new screen resolution to: {self.screen_resolution}')
 		buf = flipped.tostring()
 		self.texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
 
@@ -126,7 +92,6 @@ class CamApp(App):
 	pass
 
 
-Builder.load_file("cam.kv")
 
 
 
@@ -137,7 +102,6 @@ class AndroidCamera(Camera):
 	counter = 0
 
 	def _camera_loaded(self, *largs):
-		#self.texture = Texture.create(size=np.flip(self.camera_resolution), colorfmt='rgb')
 		self.texture = Texture.create(size=self.camera_resolution, colorfmt='rgb')
 		self.texture_size = list(self.texture.size)
 		print(f'Created GL texture with size: {self.texture_size}')
@@ -151,12 +115,9 @@ class AndroidCamera(Camera):
 
 	def frame_from_buf(self):
 		w, h = self.resolution
-		frame = np.frombuffer(self._camera._buffer.tostring(), 'uint8').reshape((h + h // 2, w))	# original one
-		#frame = np.frombuffer(self._camera._buffer.tostring(), 'uint8').reshape((w, h + h // 2))
+		frame = np.frombuffer(self._camera._buffer.tostring(), 'uint8').reshape((h + h // 2, w))	# TODO: try to understand why the frame size has nothing to do with the original resolution
 		print(f'{frame.shape = }')
-		#frame_bgr = cv2.cvtColor(frame, 93)
 		frame_bgr = cv2.cvtColor(frame, cv2.COLOR_YUV2BGR_NV21)
-		#return np.rot90(frame_bgr, 3)
 		return frame_bgr
 
 	def frame_to_screen(self, frame):
@@ -175,7 +136,11 @@ class MyApp(App):
 		return MyLayout()
 
 if __name__ == '__main__':
-	#MyApp().run()
-	CamApp().run()
+	if media_source == 'video':
+		Builder.load_file("cam.kv")
+		CamApp().run()
+	else:
+		Builder.load_file("myapplayout.kv")
+		MyApp().run()
 
 
