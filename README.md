@@ -1,7 +1,7 @@
 # Kivy OpenCV Demo
 A simple demo program for using OpenCV on Android
 
-![screenshot](pics/Screenshot_20211125-180744.jpg){ style="width:800px;" }
+![screenshot](pics/Screenshot_20211125-180744.jpg)
 
 ## Build with:
 > buildozer android debug deploy run
