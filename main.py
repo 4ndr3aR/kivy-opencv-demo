@@ -1,6 +1,7 @@
 import kivy
 
 from kivy.app import App
+from kivy.core.window import Window
 from kivy.uix.boxlayout import BoxLayout
 from kivy.graphics.texture import Texture
 from kivy.uix.image import Image
@@ -19,13 +20,17 @@ import cv2
 
 
 class KivyCamera(Image):
+	screen_resolution = (640, 480)
+	screen_resolution = (544, 544)
 	if kivy.platform == 'android':
 		image_resolution = (544, 544)
 	else:
 		image_resolution = (540, 540)
+
 	source = ObjectProperty()
 	fps = NumericProperty(60)
 	counter = 0
+	debug = 0
 	#texture = ObjectProperty()
 	#.texture_size = ObjectProperty()
 
@@ -34,15 +39,18 @@ class KivyCamera(Image):
 		self._capture = None
 		if self.source is not None:
 			self._capture = cv2.VideoCapture(self.source)
-		print('asdf')
+
+		self.screen_resolution = Window.size
+		print(f'Screen size: {Window.size}, setting new screen resolution to: {self.screen_resolution}')
 
 		Clock.schedule_interval(self.update, 1.0 / self.fps)
 
 	def create_texture(self):
 		#self.texture = Texture.create(size=np.flip(self.camera_resolution), colorfmt='rgb')
-		self.texture = Texture.create(size=self.image_resolution, colorfmt='rgb')
+		self.texture = Texture.create(size=self.screen_resolution, colorfmt='rgb')
 		self.texture_size = list(self.texture.size)
-		print(f'Created GL texture with size: {self.texture_size}')
+		if self.debug:
+			print(f'Created GL texture with size: {self.texture_size}')
 
 	def on_source(self, *args):
 		if self._capture is not None:
@@ -55,7 +63,8 @@ class KivyCamera(Image):
 
 	def update(self, dt):
 		ret, frame = self.capture.read()
-		print(f'GL texture is {self.texture} - size: {self.texture_size}')
+		if self.debug:
+			print(f'GL texture is {self.texture} - size: {self.texture_size}')
 		if ret:
 			self.create_texture()
 			#frame = self.frame_from_buf()
@@ -104,6 +113,12 @@ class KivyCamera(Image):
 			buf = flipped.tostring()
 		'''
 		flipped = np.flip(frame_rgb, 0)
+		if self.screen_resolution != self.image_resolution:
+			aspect_ratio = self.image_resolution[0] / self.image_resolution[1]
+			print(f'{aspect_ratio = }')
+			flipped = cv2.resize(flipped, (int(self.screen_resolution[1]*aspect_ratio), self.screen_resolution[1]))	# I know, this one takes into account one case out of four or more (TODO)
+			self.screen_resolution = (int(self.screen_resolution[1]*aspect_ratio), self.screen_resolution[1])
+			print(f'Screen resolution != image resolution with aspect ratio: {aspect_ratio}, setting new screen resolution to: {self.screen_resolution}')
 		buf = flipped.tostring()
 		self.texture.blit_buffer(buf, colorfmt='rgb', bufferfmt='ubyte')
 
